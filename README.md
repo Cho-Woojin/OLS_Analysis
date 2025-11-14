@@ -43,3 +43,19 @@ python src\feature_engineering.py --input "data\step1_data\step1_preprocessed_*.
 - `duration_months_initial`: `duration_days_initial ÷ 30` 값을 월 단위로 환산(소수 셋째 자리 반올림)
 - `zone_weighted_far`: 각 Zone 면적 가중치(Zone1~3 면적)와 용적률(계획 → 기준 → 법정 순)로 계산한 가중 평균
 - `unit_rent_ratio`: `임대세대총수 ÷ 총 세대수` (총 세대수 또는 임대가 0/결측이면 NA)
+
+## Step 3: 기초 통계 실행
+
+```powershell
+python src\basic_statistics.py --input "data\step2_data\step2_features_*.csv"
+```
+
+`data/step2_data`에서 최신 파일을 자동으로 선택할 수 있으며, 수치형 컬럼만 골라 최소/최대/평균/표준편차를 계산합니다. 결과 표는 `data/basic_statistic/basic_statistic_<원본파일명>_<타임스탬프>.csv`로 저장됩니다.
+
+## Step 4: 기간-지표 상관관계 분석
+
+```powershell
+python src\correlation_analysis.py --input "data\step2_data\step2_features_*.csv"
+```
+
+`duration_months_initial`을 기준으로 모든 수치형 지표와의 피어슨 상관계수, t-stat, p-value(양측 t-test)를 계산합니다. 결과는 `data/correlation_result/correlation_duration_<원본파일명>_<타임스탬프>.csv`로 저장됩니다.
