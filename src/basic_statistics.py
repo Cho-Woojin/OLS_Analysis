@@ -16,6 +16,7 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 STEP2_DIR = PROJECT_ROOT / "data" / "step2_data"
 BASIC_DIR = PROJECT_ROOT / "data" / "basic_statistic"
+EXCLUDED_COLUMNS = {"lat", "lon"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -53,7 +54,7 @@ def load_dataframe(csv_path: Path, encoding: str) -> pd.DataFrame:
 
 def numeric_columns(df: pd.DataFrame) -> List[str]:
     numeric_df = df.select_dtypes(include=["number"])
-    cols = list(numeric_df.columns)
+    cols = [col for col in numeric_df.columns if col not in EXCLUDED_COLUMNS]
     if not cols:
         raise ValueError("No numeric columns found; unable to compute statistics")
     return cols

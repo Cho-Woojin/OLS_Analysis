@@ -24,7 +24,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--input",
         type=Path,
-        help="Path to a step1 CSV. Defaults to the most recent file in data/step1_data.",
+        help="Path to a step1 CSV. Defaults to the most recent file under data/step1_data.",
     )
     parser.add_argument(
         "--output-dir",
@@ -41,7 +41,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def find_latest_csv(directory: Path) -> Path:
-    csv_files = sorted(directory.glob("*.csv"))
+    csv_files = sorted(directory.rglob("*.csv"))
     if not csv_files:
         raise FileNotFoundError(f"No CSV files found in {directory}")
     return csv_files[-1]
@@ -107,7 +107,7 @@ def save_output(df: pd.DataFrame, output_dir: Path, source_name: str, encoding: 
     output_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_source = Path(source_name).stem
-    output_path = output_dir / f"step2_features_{safe_source}_{timestamp}.csv"
+    output_path = output_dir / f"step2_{safe_source}_{timestamp}.csv"
     df.to_csv(output_path, index=False, encoding=encoding)
     print(f"[INFO] Saved enriched data to {output_path}")
     return output_path
