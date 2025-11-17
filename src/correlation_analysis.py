@@ -23,7 +23,7 @@ TARGET_COLUMN = "duration_months_initial"
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Correlation analysis vs duration")
+    parser = argparse.ArgumentParser(description="Correlation analysis for step2 data")
     parser.add_argument(
         "--input",
         type=Path,
@@ -39,6 +39,12 @@ def parse_args() -> argparse.Namespace:
         "--encoding",
         default="utf-8-sig",
         help="Encoding for reading/writing CSV files (default: utf-8-sig)",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=("target", "matrix"),
+        default="target",
+        help="'target' computes correlations vs duration_months_initial (default). 'matrix' computes the full numeric correlation matrix.",
     )
     return parser.parse_args()
 
@@ -63,6 +69,21 @@ def numeric_columns(df: pd.DataFrame) -> List[str]:
     if not cols:
         raise ValueError("No numeric columns available for correlation analysis.")
     return cols
+
+
+def numeric_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    numeric_df = df.select_dtypes(include=["number"]).copy()
+    numeric_df = numeric_df.dropna(axis=1, how="all")
+    if numeric_df.empty:
+        raise ValueError("No numeric columns available for correlation matrix analysis.")
+    return numeric_df
+
+
+def compute_full_matrix(df: pd.DataFrame) -> pd.DataFrame:
+    numeric_df = numeric_dataframe(df)
+    matrix = numeric_df.corr(method="pearson")
+    matrix.index.name = "feature"
+    return matrix
 
 
 def correlation_with_t_test(df: pd.DataFrame, columns: List[str]) -> pd.DataFrame:
@@ -113,14 +134,29 @@ def save_output(df: pd.DataFrame, output_dir: Path, source_name: str, encoding: 
     return output_path
 
 
+def save_matrix(df: pd.DataFrame, output_dir: Path, source_name: str, encoding: str) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safe_source = Path(source_name).stem
+    output_path = output_dir / f"correlation_matrix_{safe_source}_{timestamp}.csv"
+    df.to_csv(output_path, encoding=encoding)
+    print(f"[INFO] Saved correlation matrix to {output_path}")
+    return output_path
+
+
 def main() -> None:
     args = parse_args()
     input_csv = args.input or find_latest_csv(STEP2_DIR)
     df_step2 = load_dataframe(input_csv, args.encoding)
-    cols = numeric_columns(df_step2)
-    print(f"[INFO] Running correlations against '{TARGET_COLUMN}' for {len(cols)} features.")
-    corr_table = correlation_with_t_test(df_step2, cols)
-    save_output(corr_table, args.output_dir, input_csv.name, args.encoding)
+    if args.mode == "target":
+        cols = numeric_columns(df_step2)
+        print(f"[INFO] Running correlations against '{TARGET_COLUMN}' for {len(cols)} features.")
+        corr_table = correlation_with_t_test(df_step2, cols)
+        save_output(corr_table, args.output_dir, input_csv.name, args.encoding)
+    else:
+        matrix = compute_full_matrix(df_step2)
+        print(f"[INFO] Running full correlation matrix for {matrix.shape[0]} numeric features.")
+        save_matrix(matrix, args.output_dir, input_csv.name, args.encoding)
 
 
 if __name__ == "__main__":

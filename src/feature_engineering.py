@@ -17,6 +17,21 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 STEP1_DIR = PROJECT_ROOT / "data" / "step1_data"
 STEP2_DIR = PROJECT_ROOT / "data" / "step2_data"
 ZONE_INDICES: Tuple[int, ...] = (1, 2, 3)
+START_DATE_CANDIDATES: Tuple[str, ...] = (
+    "date_initial_notice",
+    "date_committee",
+    "date_latest_notice",
+)
+END_DATE_CANDIDATES: Tuple[str, ...] = (
+    "date_association",
+    "date_business_initial",
+    "date_business_latest",
+    "date_disposition_initial",
+    "date_disposition_latest",
+    "date_relocation_start",
+    "date_relocation_end",
+    "date_construction_start",
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -52,9 +67,36 @@ def load_dataframe(csv_path: Path, encoding: str) -> pd.DataFrame:
     return pd.read_csv(csv_path, encoding=encoding)
 
 
+def infer_duration_days(df: pd.DataFrame) -> pd.Series:
+    start_col = next((col for col in START_DATE_CANDIDATES if col in df.columns), None)
+    index = df.index
+    if start_col is None:
+        return pd.Series(pd.NA, index=index, dtype="Float64")
+    start_dates = pd.to_datetime(df[start_col], errors="coerce")
+    inferred = pd.Series(pd.NA, index=index, dtype="Float64")
+    for end_col in END_DATE_CANDIDATES:
+        if end_col not in df.columns:
+            continue
+        end_dates = pd.to_datetime(df[end_col], errors="coerce")
+        valid_mask = start_dates.notna() & end_dates.notna() & inferred.isna()
+        if not valid_mask.any():
+            continue
+        inferred.loc[valid_mask] = (end_dates - start_dates).dt.days[valid_mask]
+    return inferred
+
+
 def add_duration_months(df: pd.DataFrame) -> pd.Series:
-    days = df["duration_days_initial"].astype("Float64")
+    if "duration_days_initial" in df.columns:
+        days = df["duration_days_initial"].astype("Float64")
+    else:
+        inferred = infer_duration_days(df)
+        if inferred.isna().all():
+            print(
+                "[WARN] Could not infer duration_days_initial; duration_months_initial will remain empty."
+            )
+        days = inferred
     months = days / 30.0
+    months[days.isna()] = pd.NA
     return months.round(3)
 
 

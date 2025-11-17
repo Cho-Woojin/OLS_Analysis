@@ -34,9 +34,10 @@ def parse_args() -> argparse.Namespace:
 def prepare_data(df: pd.DataFrame, target: str) -> tuple[pd.Series, pd.DataFrame]:
     if target not in df.columns:
         raise ValueError(f"Target '{target}' not in dataset.")
-    numeric = df.select_dtypes(include=[np.number]).copy()
+    numeric = df.apply(pd.to_numeric, errors="coerce")
+    numeric = numeric.dropna(axis=1, how="all").copy()
     if target not in numeric.columns:
-        raise ValueError(f"Target '{target}' is not numeric.")
+        raise ValueError(f"Target '{target}' is not numeric after coercion.")
     y = numeric[target]
     X = numeric.drop(columns=[target])
     X = X.loc[:, X.std(ddof=0) > 0]

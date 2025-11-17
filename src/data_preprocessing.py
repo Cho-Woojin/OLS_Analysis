@@ -13,6 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Dict, Iterable, Set, Tuple
 
+import numpy as np
 import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -131,7 +132,6 @@ FASTTRACK_REQUIRED_TARGETS: Set[str] = {
     "duration_days_initial",
     "fasttrack_proposal_date",
     "area_total",
-    "zoning_type",
     "area_land",
     "zone1_name",
     "zone1_area",
@@ -224,6 +224,43 @@ PIPELINE_CONFIGS: Dict[str, PipelineConfig] = {
     ),
 }
 
+LOG_FEATURES: Dict[str, str] = {
+    # 규모/면적 계열
+    "area_total": "log_area_total",
+    "area_land": "log_area_land",
+    "area_gfa": "log_area_gfa",
+    "area_parking": "log_area_parking",
+    "area_public_facility": "log_area_public_facility",
+    "area_road": "log_area_road",
+    "area_park": "log_area_park",
+    "area_green": "log_area_green",
+    "area_public_open": "log_area_public_open",
+    "area_school": "log_area_school",
+    "area_other": "log_area_other",
+    "zone1_area": "log_zone1_area",
+    "zone2_area": "log_zone2_area",
+    # 세대수 계열
+    "unit_existing": "log_unit_existing",
+    "unit_total": "log_unit_total",
+    "unit_sale": "log_unit_sale",
+    "unit_s": "log_unit_s",
+    "unit_m": "log_unit_m",
+    "unit_l": "log_unit_l",
+    "unit_rent_total": "log_unit_rent_total",
+    "unit_rent_xxs": "log_unit_rent_xxs",
+    "unit_rent_xs": "log_unit_rent_xs",
+    "unit_rent_s": "log_unit_rent_s",
+}
+
+COLUMN_ALIASES: Dict[str, Dict[str, str]] = {
+    "fasttrack": {
+        "후보지~지정고시": "후보지-지정고시",
+        "60㎡초과~85㎡이하": "60㎡초과85㎡이하",
+        "(임대)40㎡초과~50㎡이하": "(임대)40㎡초과50㎡이하",
+        "학교면 적(㎡)": "학교면적(㎡)",
+    }
+}
+
 
 def _clean_numeric_string(series: pd.Series) -> pd.Series:
     str_series = series.astype("string")
@@ -312,6 +349,7 @@ def add_pipeline_specific_features(df: pd.DataFrame, config: PipelineConfig) -> 
                 f"[WARN] Dropping {invalid_count} rows with negative infrastructure ratio (PRESENT_SN: {preview}{suffix})."
             )
             df = df.loc[~invalid_mask].copy()
+    df = _add_log_features(df)
     return df
 
 
@@ -367,6 +405,9 @@ def load_raw_dataframe(
             tried_messages.append(f"encoding {candidate}: {exc}")
             continue
 
+        df = _standardize_column_names(df)
+        df = _apply_column_aliases(df, config.name)
+
         if all(col in df.columns for col in config.required_source_columns):
             if candidate != encoding:
                 print(
@@ -386,6 +427,40 @@ def load_raw_dataframe(
     raise KeyError(
         f"Unable to load required columns from {csv_path}. Tried encodings {details}"
     )
+
+
+def _standardize_column_names(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    df.columns = [col.strip() if isinstance(col, str) else col for col in df.columns]
+    return df
+
+
+def _apply_column_aliases(df: pd.DataFrame, pipeline_name: str) -> pd.DataFrame:
+    alias_map = COLUMN_ALIASES.get(pipeline_name, {})
+    rename_map = {
+        alias: target
+        for alias, target in alias_map.items()
+        if alias in df.columns and target not in df.columns
+    }
+    if rename_map:
+        df = df.rename(columns=rename_map)
+    return df
+
+
+def _add_log_features(df: pd.DataFrame) -> pd.DataFrame:
+    for source, target in LOG_FEATURES.items():
+        if source not in df.columns:
+            continue
+        df[target] = _log1p_series(df[source])
+    return df
+
+
+def _log1p_series(series: pd.Series) -> pd.Series:
+    numeric = series.astype("Float64")
+    mask = numeric.notna()
+    result = numeric.copy()
+    result[mask] = np.log1p(numeric[mask])
+    return result.astype("Float64")
 
 
 def ensure_columns(df: pd.DataFrame, required: Iterable[str]) -> None:

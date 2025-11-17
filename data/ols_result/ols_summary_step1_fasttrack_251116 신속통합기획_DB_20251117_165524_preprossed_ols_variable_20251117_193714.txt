@@ -1,0 +1,40 @@
+                               OLS Regression Results                              
+===================================================================================
+Dep. Variable:     duration_months_initial   R-squared:                       1.000
+Model:                                 OLS   Adj. R-squared:                  1.000
+Method:                      Least Squares   F-statistic:                 1.930e+10
+Date:                     Mon, 17 Nov 2025   Prob (F-statistic):           1.70e-40
+Time:                             19:37:14   Log-Likelihood:                 180.93
+No. Observations:                       22   AIC:                            -333.9
+Df Residuals:                            8   BIC:                            -318.6
+Df Model:                               13                                         
+Covariance Type:                 nonrobust                                         
+=========================================================================================
+                            coef    std err          t      P>|t|      [0.025      0.975]
+-----------------------------------------------------------------------------------------
+const                     0.0027      0.001      3.183      0.013       0.001       0.005
+duration_days_initial     0.0333   1.37e-07   2.44e+05      0.000       0.033       0.033
+log_area_total           -0.0006      0.000     -2.971      0.018      -0.001      -0.000
+log_unit_total            0.0005      0.000      2.354      0.046    1.01e-05       0.001
+floors                 6.566e-05   1.13e-05      5.823      0.000    3.97e-05    9.17e-05
+height                -1.735e-05   3.47e-06     -4.992      0.001   -2.54e-05   -9.33e-06
+public_space_ratio        0.0081      0.004      1.994      0.081      -0.001       0.018
+rent_ratio                0.0020      0.001      1.734      0.121      -0.001       0.005
+rent_small_ratio         -0.0003      0.000     -1.197      0.266      -0.001       0.000
+public_infra_ratio       -0.0066      0.004     -1.638      0.140      -0.016       0.003
+region_dummy_동남권          0.0005      0.000      2.894      0.020       0.000       0.001
+region_dummy_서남권          0.0004      0.000      2.069      0.072   -4.78e-05       0.001
+region_dummy_서북권          0.0005      0.000      2.756      0.025    8.46e-05       0.001
+region_dummy_동북권      -5.454e-05      0.000     -0.383      0.712      -0.000       0.000
+region_dummy_도심권          0.0013      0.000      5.124      0.001       0.001       0.002
+==============================================================================
+Omnibus:                        0.330   Durbin-Watson:                   1.540
+Prob(Omnibus):                  0.848   Jarque-Bera (JB):                0.492
+Skew:                          -0.183   Prob(JB):                        0.782
+Kurtosis:                       2.365   Cond. No.                     1.32e+19
+==============================================================================
+
+Notes:
+[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+[2] The smallest eigenvalue is 7.26e-32. This might indicate that there are
+strong multicollinearity problems or that the design matrix is singular.
